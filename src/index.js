@@ -16,7 +16,7 @@ let windowHalfY = window.innerHeight / 2;
 const audioCtx = new AudioContext();
 let analyser;
 
-let powerBuffer;
+let ampBuffer = new CircularBuffer(AMOUNTY);
 
 init();
 // animate();
@@ -146,13 +146,14 @@ function animate() {
         analyser.getFloatTimeDomainData(data);
 
         let amp = averagePower(data);
-        render(amp);
+        ampBuffer.write(amp);
+        render();
     }
 
     draw();
 }
 
-function render(amp) {
+function render() {
 
     camera.position.x += ( mouseX - camera.position.x ) * .05;
     camera.position.y += ( - mouseY - camera.position.y ) * .05;
@@ -167,16 +168,17 @@ function render(amp) {
 
         for ( let iy = 0; iy < AMOUNTY; iy ++ ) {
 
-            // positions[ i + 1 ] = amp * 50 + ( amp * 0.5 ) * 50;
-
-            scales[ j ] = amp  * 100;
+            let amp = ampBuffer.read(iy);
+            positions[ i + 1 ] = amp * 100;
+            scales[ j ] = amp  * 200;
 
             i += 3;
             j ++;
         }
     }
 
-    // particles.geometry.attributes.position.needsUpdate = true;
+    ampBuffer.incrementReadPointer();
+    particles.geometry.attributes.position.needsUpdate = true;
     particles.geometry.attributes.scale.needsUpdate = true;
 
     renderer.render( scene, camera );
@@ -216,5 +218,20 @@ function onDocumentTouchMove( event ) {
 
         mouseX = event.touches[ 0 ].pageX - windowHalfX;
         mouseY = event.touches[ 0 ].pageY - windowHalfY;
+    }
+}
+
+
+function CircularBuffer(length){
+    this.writePointer = 0;
+    this.readPointer = 0;
+
+    this.buffer = new Float32Array(length);
+    this.read = (offset = 0) => this.buffer[(this.readPointer + offset + length) % length];
+    this.incrementReadPointer = () => {this.readPointer++; this.readPointer %= length};
+    this.write = (val) => {
+        this.buffer[this.writePointer] = val;
+        this.writePointer++;
+        this.writePointer %= length;
     }
 }
