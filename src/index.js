@@ -16,7 +16,7 @@ let windowHalfY = window.innerHeight / 2;
 const audioCtx = new AudioContext();
 let analyser;
 
-let ampBuffer = new CircularBuffer(AMOUNTY);
+let ampBuffer = new CircularBuffer(4 * AMOUNTY);
 
 init();
 // animate();
@@ -62,7 +62,7 @@ function init() {
     document.body.appendChild( container );
 
     camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
-    camera.position.z = 1000;
+    camera.position.z = (AMOUNTY * SEPARATION) / 2;
 
     scene = new THREE.Scene();
 
@@ -79,9 +79,9 @@ function init() {
 
         for ( let iy = 0; iy < AMOUNTY; iy ++ ) {
 
-            positions[ i ] = ix * SEPARATION - ( ( AMOUNTX * SEPARATION ) / 2 ); // x
+            positions[ i ] = ( ( AMOUNTX * SEPARATION ) / 2 ) - (ix * SEPARATION); // x
             positions[ i + 1 ] = 0; // y
-            positions[ i + 2 ] = iy * SEPARATION - ( ( AMOUNTY * SEPARATION ) / 2 ); // z
+            positions[ i + 2 ] = ( ( AMOUNTY * SEPARATION ) / 2) - (iy * SEPARATION); // z
 
             scales[ j ] = 1;
 
@@ -156,7 +156,7 @@ function animate() {
 function render() {
 
     camera.position.x += ( mouseX - camera.position.x ) * .05;
-    camera.position.y += ( - mouseY - camera.position.y ) * .05;
+    camera.position.y += ( - mouseY - camera.position.y) * .05;
     camera.lookAt( scene.position );
 
     let positions = particles.geometry.attributes.position.array;
@@ -168,9 +168,9 @@ function render() {
 
         for ( let iy = 0; iy < AMOUNTY; iy ++ ) {
 
-            let amp = ampBuffer.read(iy);
+            let amp = ampBuffer.read( 3 * (- Math.round(Math.sqrt(Math.pow(iy - (AMOUNTY / 2),2) + Math.pow(ix - (AMOUNTX / 2), 2)))));
             positions[ i + 1 ] = amp * 100;
-            scales[ j ] = amp  * 200;
+            scales[ j ] = amp  * 300;
 
             i += 3;
             j ++;
