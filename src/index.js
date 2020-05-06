@@ -1,7 +1,9 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import gltfPath from './assets/scene.gltf';
+import vertices from './assets/vertices2.csv';
 
-
-const SEPARATION = 100, AMOUNTX = 50, AMOUNTY = 50;
+const SEPARATION = 5, AMOUNTX = 80, AMOUNTZ = 80;
 
 let container;
 let camera, scene, renderer;
@@ -16,7 +18,7 @@ let windowHalfY = window.innerHeight / 2;
 const audioCtx = new AudioContext();
 let analyser;
 
-let ampBuffer = new CircularBuffer(4 * AMOUNTY);
+let ampBuffer = new CircularBuffer(4 * AMOUNTZ);
 
 init();
 // animate();
@@ -33,63 +35,51 @@ navigator.mediaDevices.getUserMedia({audio: true, video: false})
         animate();
     });
 
-// function buildDots({scene}) {
-//     let dots = [];
-//     const distance = 20;
-//     const dotSpacing = 0.3;
-//
-//     for(let i = -distance; i < distance; i += dotSpacing) {
-//         for (let j = -distance; j < distance; j+= dotSpacing) {
-//             geometry = new THREE.SphereGeometry(0.02, 0.2, 0.2);
-//             material = new THREE.MeshBasicMaterial();
-//             mesh = new THREE.Mesh(geometry, material);
-//             material.color = new THREE.Color(1,1,1);
-//             material.opacity = 0.0001;
-//             mesh.position.x =  i;
-//             mesh.position.z = j;
-//
-//             scene.add(mesh);
-//             dots.push(mesh);
-//         }
-//     }
-//
-//     return dots;
-// }
-
 function init() {
 
     container = document.createElement( 'div' );
     document.body.appendChild( container );
 
-    camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
-    camera.position.z = (AMOUNTY * SEPARATION) / 2;
+    camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 2 * AMOUNTZ * SEPARATION );
+    camera.position.z = (AMOUNTZ * SEPARATION) / 2;
 
     scene = new THREE.Scene();
+    // scene.background = new THREE.Color( 0x999999 );
 
-    //
+    const gltfLoader = new GLTFLoader();
+    gltfLoader.load(gltfPath, (model) => {
+        scene.add(model.scene);
+    }, () => {}, (error) => {
+        console.log("error ", error)});
 
-    let numParticles = AMOUNTX * AMOUNTY;
+
+    let numParticles = (AMOUNTX * AMOUNTZ) + vertices.length;
 
     let positions = new Float32Array( numParticles * 3 );
     let scales = new Float32Array( numParticles );
 
     let i = 0, j = 0;
 
+    for(let vertexIndex = 0; vertexIndex < vertices.length; vertexIndex++) {
+
+        positions[ 3*vertexIndex ] = vertices[vertexIndex][0];
+        positions[ (3*vertexIndex) + 1 ] = vertices[vertexIndex][1];
+        positions[ (3*vertexIndex) + 2 ] = vertices[vertexIndex][2];
+        scales[vertexIndex] = 0;
+    }
+
     for ( let ix = 0; ix < AMOUNTX; ix ++ ) {
+        for ( let iz = 0; iz < AMOUNTZ; iz ++ ) {
 
-        for ( let iy = 0; iy < AMOUNTY; iy ++ ) {
+            positions[ (3*(vertices.length + 1)) + i ] = ( ( AMOUNTX * SEPARATION ) / 2 ) - (ix * SEPARATION); // x
+            positions[ (3*(vertices.length + 1)) + i + 1 ] = 0; // y
+            positions[ (3*(vertices.length + 1)) + i + 2 ] = ( ( AMOUNTZ * SEPARATION ) / 2) - (iz * SEPARATION); // z
 
-            positions[ i ] = ( ( AMOUNTX * SEPARATION ) / 2 ) - (ix * SEPARATION); // x
-            positions[ i + 1 ] = 0; // y
-            positions[ i + 2 ] = ( ( AMOUNTY * SEPARATION ) / 2) - (iy * SEPARATION); // z
-
-            scales[ j ] = 1;
+            scales[ vertices.length + 1 + j ] = 0;
 
             i += 3;
             j ++;
-
         }
-
     }
 
     let geometry = new THREE.BufferGeometry();
@@ -129,10 +119,10 @@ function init() {
 
 function averagePower(array) {
     let length = 0.0;
-    return array.reduce((acc, sample) => {
+    return Math.sqrt(array.reduce((acc, sample) => {
         length++;
-        return acc + Math.abs(sample);
-    }, 0) / length;
+        return acc + Math.pow(sample, 2);
+    }, 0) / length);
 }
 
 // let lastVal = 0;
@@ -155,30 +145,23 @@ function animate() {
 
 function render() {
 
-    camera.position.x += ( mouseX - camera.position.x ) * .05;
-    camera.position.y += ( - mouseY - camera.position.y) * .05;
+    camera.position.x += ( mouseX - camera.position.x ) * .005;
+    camera.position.y += ( - mouseY - camera.position.y) * .005;
     camera.lookAt( scene.position );
 
     let positions = particles.geometry.attributes.position.array;
     let scales = particles.geometry.attributes.scale.array;
 
-    let i = 0, j = 0;
-
-    for ( let ix = 0; ix < AMOUNTX; ix ++ ) {
-
-        for ( let iy = 0; iy < AMOUNTY; iy ++ ) {
-
-            let amp = ampBuffer.read( 3 * (- Math.round(Math.sqrt(Math.pow(iy - (AMOUNTY / 2),2) + Math.pow(ix - (AMOUNTX / 2), 2)))));
-            positions[ i + 1 ] = amp * 100;
-            scales[ j ] = amp  * 300;
-
-            i += 3;
-            j ++;
-        }
+    for(let particleIndex = 0; particleIndex < scales.length; particleIndex++) {
+        let ix = positions[3 * particleIndex];
+        let iy = positions[(3 * particleIndex) + 1];
+        let iz = positions[(3 * particleIndex) + 2];
+        let amp = ampBuffer.read( (- Math.round(Math.sqrt(Math.pow(iz, 2) + Math.pow(iy,2) + Math.pow(ix, 2)))));
+        scales[particleIndex] = amp * 7;
     }
 
     ampBuffer.incrementReadPointer();
-    particles.geometry.attributes.position.needsUpdate = true;
+    // particles.geometry.attributes.position.needsUpdate = true;
     particles.geometry.attributes.scale.needsUpdate = true;
 
     renderer.render( scene, camera );
