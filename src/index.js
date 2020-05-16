@@ -29,6 +29,8 @@ let data;
 init();
 // animate();
 
+const isSafari = navigator.userAgent.indexOf("Safari") !== -1;
+
 console.log("app loaded");
 
 document.addEventListener('click', function() {
@@ -144,6 +146,14 @@ function averagePower(array) {
     }, 0) / length);
 }
 
+function normaliseByteData(data) {
+    const floatArray = new Float32Array(data.length);
+    data.forEach((value, i) => {
+        floatArray[i] = (value - 128.0) / 128.0
+    });
+    return floatArray;
+}
+
 // let lastVal = 0;
 function animate() {
     console.log("animating");
@@ -156,6 +166,8 @@ function animate() {
         analyser.getFloatTimeDomainData(data);
 
         let amp = averagePower(data);
+
+        // console.log("amp: ", amp);
         ampBuffer.write(amp);
         render();
     }
@@ -177,7 +189,8 @@ function render() {
         let iy = positions[(3 * particleIndex) + 1];
         let iz = positions[(3 * particleIndex) + 2];
         let amp = ampBuffer.read( (- Math.round(Math.sqrt(Math.pow(iz, 2) + Math.pow(iy,2) + Math.pow(ix, 2)))));
-        scales[particleIndex] = amp * 40 * SEPARATION;
+        scales[particleIndex] = amp * 4 * SEPARATION;
+        !isSafari && (scales[particleIndex] *= 10);
     }
 
     ampBuffer.incrementReadPointer();
