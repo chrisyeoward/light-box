@@ -1,5 +1,9 @@
 import * as THREE from 'three';
+import { AudioContext } from 'standardized-audio-context';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+// import WebXRPolyfill from 'webxr-polyfill';
+// const polyfill = new WebXRPolyfill();
+
 import gltfPath from './assets/scene.gltf';
 import vertices from './assets/vertices2.csv';
 
@@ -19,12 +23,27 @@ const audioCtx = new AudioContext();
 let analyser;
 
 let ampBuffer = new CircularBuffer(4 * AMOUNTZ);
+let bufferLength;
+let data;
 
 init();
 // animate();
 
+console.log("app loaded");
+
+document.addEventListener('click', function() {
+    // check if context is in suspended state (autoplay policy)
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+        console.log("start audio context");
+    }
+}, false);
+
+
+
 navigator.mediaDevices.getUserMedia({audio: true, video: false})
     .then((stream) => {
+        console.log("stream loaded");
         const source = audioCtx.createMediaStreamSource(stream);
         analyser = audioCtx.createAnalyser();
 
@@ -127,6 +146,7 @@ function averagePower(array) {
 
 // let lastVal = 0;
 function animate() {
+    console.log("animating");
     let bufferLength = analyser.fftSize;
     let data = new Float32Array(bufferLength);
 
@@ -157,7 +177,7 @@ function render() {
         let iy = positions[(3 * particleIndex) + 1];
         let iz = positions[(3 * particleIndex) + 2];
         let amp = ampBuffer.read( (- Math.round(Math.sqrt(Math.pow(iz, 2) + Math.pow(iy,2) + Math.pow(ix, 2)))));
-        scales[particleIndex] = amp * 7;
+        scales[particleIndex] = amp * 40 * SEPARATION;
     }
 
     ampBuffer.incrementReadPointer();
