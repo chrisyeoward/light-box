@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { AudioContext } from 'standardized-audio-context';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
-// import WebXRPolyfill from 'webxr-polyfill';
-// const polyfill = new WebXRPolyfill();
+import WebXRPolyfill from 'webxr-polyfill';
+const polyfill = new WebXRPolyfill();
 
 import gltfPath from './assets/scene.gltf';
 import vertices from './assets/vertices2.csv';
@@ -189,8 +189,8 @@ function render() {
         let iy = positions[(3 * particleIndex) + 1];
         let iz = positions[(3 * particleIndex) + 2];
         let amp = ampBuffer.read( (- Math.round(Math.sqrt(Math.pow(iz, 2) + Math.pow(iy,2) + Math.pow(ix, 2)))));
-        scales[particleIndex] = amp * 4 * SEPARATION;
-        !isSafari && (scales[particleIndex] *= 10);
+        scales[particleIndex] = amp * 7 * SEPARATION;
+        // !isSafari && (scales[particleIndex] *= 10);
     }
 
     ampBuffer.incrementReadPointer();
