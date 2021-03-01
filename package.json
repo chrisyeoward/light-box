@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "standardized-audio-context": "^24.1.14",
-    "three": "^0.115.0",
+    "three": "^0.125.0",
     "webvr-polyfill": "^0.10.11",
     "webxr-polyfill": "^2.0.2"
   },
